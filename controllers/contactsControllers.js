@@ -1,66 +1,53 @@
-import { listContacts, getContactById, removeContact, addContact, updateContact } from "../services/contactsServices.js";
-import { validateBody } from '../helpers/validateBody';
-import HttpError from '../helpers/HttpError';
+import contactsService from '../services/contactsServices.js';
 
-export const getAllContacts = (req, res, next) => {
-    try {
-        const contacts = listContacts();
-        res.status(200).json(contacts);
-    } catch (error) {
-        next(new HttpError(500, error.message));
-    }
+import ctrlWrapper from '../decorators/ctrlWrapper.js';
+
+import HttpError from '../helpers/HttpError.js';
+
+import { addContactSchema, updateContactSchema } from '../schemas/contactsSchemas.js';
+
+const getAll = async (req, res, next) => {
+  const result = await contactsService.listContacts();
+  res.json(result);
 };
 
-export const getOneContact = (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const contact = getContactById(id);
-        if (!contact) {
-            return next(new HttpError(404, 'Not found'));
-        }
-        res.status(200).json(contact);
-    } catch (error) {
-        next(new HttpError(500, error.message));
-    }
+const getById = async (req, res, next) => {
+  const { id } = req.params;
+  const result = await contactsService.getContactById(id);
+  if (!result) {
+    throw HttpError(404, `Not found`);
+  }
+  res.json(result);
 };
 
-export const deleteContact = (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const deletedContact = removeContact(id);
-        if (!deletedContact) {
-            return next(new HttpError(404, 'Not found'));
-        }
-        res.status(200).json(deletedContact);
-    } catch (error) {
-        next(new HttpError(500, error.message));
-    }
+const addContact = async (req, res, next) => {
+  const { name, email, phone } = req.body;
+  const result = await contactsService.addContact(name, email, phone);
+  res.status(201).json(result);
 };
 
-export const createContact = (req, res, next) => {
-    try {
-        validateBody(req.body, next);
-        const { name, email, phone } = req.body;
-        const newContact = addContact(name, email, phone);
-        res.status(201).json(newContact);
-    } catch (error) {
-        next(new HttpError(400, error.message));
-    }
+const updateContact = async (req, res, next) => {
+  const { id } = req.params;
+  const result = await contactsService.updateContactById(id, req.body);
+  if (!result) {
+    throw HttpError(404, `Not found`);
+  }
+  res.json(result);
 };
 
-export const updateContact = (req, res, next) => {
-    try {
-        const { id } = req.params;
-        if (Object.keys(req.body).length === 0) {
-            return next(new HttpError(400, 'Body must have at least one field'));
-        }
-        validateBody(req.body, next);
-        const updatedContact = updateContact(id, req.body);
-        if (!updatedContact) {
-            return next(new HttpError(404, 'Not found'));
-        }
-        res.status(200).json(updatedContact);
-    } catch (error) {
-        next(new HttpError(400, error.message));
-    }
+const deleteContact = async (req, res, next) => {
+  const { id } = req.params;
+  const result = await contactsService.removeContactById(id);
+  if (!result) {
+    throw HttpError(404, `Not found`);
+  }
+  res.json(result);
+};
+
+export default {
+  getAll: ctrlWrapper(getAll),
+  getById: ctrlWrapper(getById),
+  deleteContact: ctrlWrapper(deleteContact),
+  addContact: ctrlWrapper(addContact),
+  updateContact: ctrlWrapper(updateContact),
 };
